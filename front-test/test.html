@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="connect-src 'self' ws://127.0.0.1:8000;">
+    <title>Title</title>
+</head>
+<body>
+
+</body>
+<script>
+
+입장할 방이름을 입력하세요
+생성 - 방이름 입력
+
+
+//방 생성 또는 입장
+const gameSocket = new WebSocket(
+    'ws://' + '127.0.0.1:8000' + '/ws/game'
+);
+
+// WebSocket 연결 성공 시
+gameSocket.onopen = function(e) {
+    console.log("Connected to WebSocket!");
+};
+
+// 서버에서 메시지를 받았을 때
+gameSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    console.log("Received data:", data);
+
+    // 받은 게임 데이터 (예: 'move')
+    const move = data.move;
+    // 게임 상태 업데이트 (예시)
+    console.log("Move received:", move);
+};
+
+// WebSocket 연결 종료 시
+gameSocket.onclose = function(e) {
+    console.log("Disconnected from WebSocket!");
+};
+
+// 게임 데이터 보내기 (예: 'move' 정보)
+function sendMove(move) {
+    gameSocket.send(JSON.stringify({
+        'move': move  // 클라이언트에서 보낼 데이터
+    }));
+}
+
+// 예시로 버튼 클릭 시 이동 보내기
+document.getElementById("moveButton").onclick = function() {
+    sendMove("player1_move");  // 실제 게임 로직에 맞게 수정
+};
+
+</script>
+</html>
