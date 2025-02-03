@@ -1,4 +1,14 @@
 from .base import *
+import os
+from dotenv import load_dotenv
+# .env 파일 로드
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_CONNECT_SRC = ("'self'", "ws://" + os.getenv("SERVER_IP") + ":8000")
 
 # 기본 캐시 (환경에 따라 변경)
 CACHES = {

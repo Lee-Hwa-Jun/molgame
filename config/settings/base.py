@@ -2,8 +2,6 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure-&0%w_tc8tfscvxiv=^80s)6egwvr2bb5+wy2n^$7xb91$g^u_j"
-
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
@@ -23,8 +21,6 @@ INSTALLED_APPS = [
     "csp",
 ]
 
-CSP_DEFAULT_SRC = ("'self'",)
-CSP_CONNECT_SRC = ("'self'", "ws://127.0.0.1:8000", "wss://127.0.0.1:8000")
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -75,10 +71,11 @@ ASGI_APPLICATION = "config.asgi.application"
 # ]
 
 
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
-USE_I18N = True
-USE_TZ = True
+LANGUAGE_CODE = "ko-kr"   # 한국어
+TIME_ZONE = "Asia/Seoul"  # 서울 시간대
+USE_I18N = True           # 국제화 기능 사용
+USE_L10N = True           # 현지화 기능 사용 (숫자, 날짜 형식 등)
+USE_TZ = True             # 타임존 사용
 
 
 # Static files (CSS, JavaScript, Images)
