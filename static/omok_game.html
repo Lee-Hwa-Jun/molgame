@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오목 - 게임</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background: #d8a65a;
+            border: 2px solid black;
+        }
+        #chat {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #chatLog {
+            border: 1px solid #444;
+            padding: 10px;
+            background: #333;
+            border-radius: 5px;
+            width: 300px;
+            height: 150px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+        #chatInput {
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background: #2c2c2c;
+            color: white;
+            width: 200px;
+            margin-right: 10px;
+        }
+        #chatInput:focus {
+            outline: none;
+            border-color: #ff4757;
+        }
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            background: #ff4757;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #e84150;
+        }
+        #role { margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>오목 게임</h1>
+    <canvas id="board" width="570" height="570"></canvas>
+    <p id="turn">대기 중...</p>
+    <p id="role"></p>
+    <div id="chat">
+        <div id="chatLog"></div>
+        <div style="margin-top: 10px;">
+            <input type="text" id="chatInput" placeholder="채팅 입력">
+            <button onclick="sendChat()">채팅</button>
+        </div>
+    </div>
+    </br>
+    <button id="leaveButton" onclick="leaveRoom()">방 나가기</button>
+
+    <script>
+        const canvas = document.getElementById('board');
+        const ctx = canvas.getContext('2d');
+        const boardSize = 19;
+        const winCount = 5;
+        const size = canvas.width / (boardSize - 1);
+        const stones = Array.from(Array(boardSize), () => Array(boardSize).fill(null));
+        let currentPlayer = null; // 현재 차례
+        let myRole = null;        // 내 역할
+        let myUserId = null;      // 내 고유 ID
+        let opponentAlive = false; // 상대방 접속 상태
+        let lastPongTime = Date.now();
+
+        const turn = document.getElementById('turn');
+        const roleDisplay = document.getElementById('role');
+        const roomName = new URLSearchParams(window.location.search).get('room') || 'test';
+
+        const wsUrl = `ws://${window.location.host}/ws/game/omok/${roomName}`;
+        console.log("WebSocket URL:", wsUrl);
+        const gameSocket = new WebSocket(wsUrl);
+
+        gameSocket.onopen = () => {
+            console.log("WebSocket 연결 성공:", roomName);
+            turn.innerText = "서버 연결됨, 역할 대기 중...";
+            // 주기적 핑 전송 시작
+            setInterval(() => {
+                if (myUserId) {
+                    gameSocket.send(JSON.stringify({'type': 'ping', 'message': {'user_id': myUserId}}));
+                    if (opponentAlive && Date.now() - lastPongTime > 15000) { // 15초 응답 없음
+                        alert("상대방이 접속을 끊었습니다. 당신의 승리!");
+                        canvas.removeEventListener('click', handleClick);
+                        requestRoomDeletion(); // 상대방 통신 없음 시 방 삭제 요청
+                        window.location.href = '/';
+                    }
+                }
+            }, 10000); // 10초마다 핑
+        };
+
+        gameSocket.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            console.log("수신된 메시지:", data);
+            if (data.type === 'role') {
+                myRole = data.message.role;
+                myUserId = data.message.user_id;
+                roleDisplay.innerText = `당신은 ${myRole === 'black' ? '흑' : '백'}입니다.`;
+            } else if (data.type === 'status') {
+                currentPlayer = data.message.current_turn;
+                turn.innerText = `${currentPlayer === 'black' ? '흑' : '백'} 차례`;
+            } else if (data.type === 'move') {
+                placeStone(data.message.x, data.message.y);
+            } else if (data.type === 'chat') {
+                document.getElementById('chatLog').innerHTML += `<p>${data.message}</p>`;
+                const chatLog = document.getElementById('chatLog');
+                chatLog.scrollTop = chatLog.scrollHeight; // 채팅 창 아래로 스크롤
+            } else if (data.type === 'pong') {
+                if (data.message.user_id !== myUserId) {
+                    opponentAlive = true;
+                    lastPongTime = Date.now();
+                }
+            } else if (data.type === 'disconnect') {
+                if (data.message.user_id !== myUserId) {
+                    alert("상대방이 접속을 끊었습니다. 당신의 승리!");
+                    canvas.removeEventListener('click', handleClick);
+                    requestRoomDeletion(); // 상대방 접속 끊김 시 방 삭제 요청
+                    window.location.href = '/';
+                }
+            }
+            else if (data.type === 'room_deleted') {
+                alert("방이 삭제되었습니다. 메인 페이지로 이동합니다.");
+                window.location.href = '/';
+            }
+        };
+
+        gameSocket.onclose = (e) => {
+            console.log("WebSocket 연결 종료:", e);
+            turn.innerText = "서버 연결 끊김";
+        };
+
+        gameSocket.onerror = (e) => {
+            console.error("WebSocket 오류 발생:", e);
+            turn.innerText = "WebSocket 연결 실패";
+        };
+
+        function drawBoard() {
+            for (let i = 0; i < boardSize; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * size, 0); ctx.lineTo(i * size, canvas.height); ctx.stroke();
+                ctx.moveTo(0, i * size); ctx.lineTo(canvas.width, i * size); ctx.stroke();
+            }
+        }
+
+        function countStones(x, y, dx, dy) {
+            let count = 0;
+            let i = x + dx, j = y + dy;
+            while (i >= 0 && i < boardSize && j >= 0 && j < boardSize && stones[i][j] === stones[x][y]) {
+                count++; i += dx; j += dy;
+            }
+            return count;
+        }
+
+        function checkWin(x, y) {
+            const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
+            for (let [dx, dy] of directions) {
+                if (countStones(x, y, dx, dy) + countStones(x, y, -dx, -dy) + 1 === winCount) {
+                    const winner = stones[x][y] === 'black' ? '흑' : '백';
+                    alert(`${winner} 승리! 30초 뒤 방이 삭제 됩니다.`);
+                    canvas.removeEventListener('click', handleClick);
+                    if (currentPlayer === 'black'){
+                        requestRoomDeletionAfterDelay(30000); // 30초 뒤 방 삭제 요청
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function placeStone(x, y) {
+            if (stones[x][y] !== null) return;
+            stones[x][y] = currentPlayer;
+            ctx.beginPath();
+            ctx.arc(x * size, y * size, size / 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = currentPlayer;
+            ctx.fill();
+            ctx.stroke();
+
+            if (!checkWin(x, y)) {
+                currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+                turn.innerText = `${currentPlayer === 'black' ? '흑' : '백'} 차례`;
+            }
+        }
+
+        function handleClick(event) {
+            if (!myRole || !myUserId) {
+                alert("역할이 아직 설정되지 않았습니다.");
+                return;
+            }
+            if (myRole !== currentPlayer) {
+                alert(`지금은 ${currentPlayer === 'black' ? '흑' : '백'} 차례입니다. 당신은 ${myRole === 'black' ? '흑' : '백'}입니다.`);
+                return;
+            }
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.round((event.clientX - rect.left) / size);
+            const y = Math.round((event.clientY - rect.top) / size);
+            if (x >= 0 && x < boardSize && y >= 0 && y < boardSize) {
+                console.log("착수 요청 전송:", {x, y});
+                gameSocket.send(JSON.stringify({'type': 'move', 'message': {x, y}}));
+            }
+        }
+
+        function sendChat() {
+            const msg = document.getElementById('chatInput').value;
+            if (msg && myRole) {
+                const formattedMsg = `${myRole === 'black' ? '흑' : '백'}: ${msg}`;
+                gameSocket.send(JSON.stringify({'type': 'chat', 'message': formattedMsg}));
+                document.getElementById('chatInput').value = '';
+            }
+        }
+
+        function leaveRoom() {
+            if (confirm("정말 방을 나가시겠습니까?")) {
+                gameSocket.send(JSON.stringify({'type': 'leave_room', 'message': {'user_id': myUserId, 'room': roomName}}));
+                window.location.href = '/';
+            }
+        }
+
+        function requestRoomDeletion() {
+            if (myUserId && roomName) {
+                gameSocket.send(JSON.stringify({'type': 'delete_room', 'message': {'room': roomName}}));
+            }
+        }
+
+        function requestRoomDeletionAfterDelay(delay) {
+            setTimeout(() => {
+                requestRoomDeletion();
+            }, delay);
+            window.location.href = '/';
+        }
+
+        // Enter 키로 채팅 전송
+        document.getElementById('chatInput').addEventListener('keypress', (event) => {
+            if (event.key === 'Enter' && document.getElementById('chatInput').value.trim()) {
+                sendChat();
+                const chatLog = document.getElementById('chatLog');
+                chatLog.scrollTop = chatLog.scrollHeight; // 채팅 창 아래로 스크롤
+            }
+        });
+
+        canvas.addEventListener('click', handleClick);
+        drawBoard();
+    </script>
+</body>
+</html>

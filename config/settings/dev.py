@@ -1,16 +1,13 @@
 from .base import *
 import os
 from dotenv import load_dotenv
-# .env 파일 로드
-load_dotenv()
 
+load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-
 CSP_DEFAULT_SRC = ("'self'",)
-CSP_CONNECT_SRC = ("'self'", "ws://" + os.getenv("SERVER_IP") + ":8000")
+CSP_CONNECT_SRC = ("'self'", f"ws://{os.getenv('SERVER_IP')}:8000")
 
-# 기본 캐시 (환경에 따라 변경)
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -18,7 +15,6 @@ CACHES = {
     }
 }
 
-# 개발용 데이터베이스 (SQLite)
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -26,9 +22,9 @@ DATABASES = {
     }
 }
 
-# 개발용 WebSocket (메모리 사용)
+# 개발용 InMemoryChannelLayer
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
     }
 }

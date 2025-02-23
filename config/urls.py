@@ -1,12 +1,12 @@
-# from django.contrib import admin
+from django.conf import settings
+from django.conf.urls.static import static
 from django.urls import path
-from django.views import generic
+from django.shortcuts import render  # render 함수 import 추가
 
-# WebSocket 경로는 asgi.py에서 설정하는 게 보통이지만, 여기도 예시로 작성
 urlpatterns = [
-    # path('admin/', admin.site.urls),  # Admin 경로
-    # path('', generic.TemplateView.as_view(template_name="index.html")),  # 기본 홈페이지
+                  # 방 선택 화면 (omok_main.html)
+                  path('', lambda request: render(request, 'omok_main.html'), name='main'),
 
-    # 웹소켓 관련 라우팅은 일반적으로 asgi.py에서 처리되므로 여기에 추가할 필요 없음
-    # path('ws/game/', GameConsumer.as_asgi()),  # WebSocket은 asgi.py에서 설정
-]
+                  # 게임 화면 (omok_game.html)
+                  path('game/', lambda request: render(request, 'omok_game.html'), name='game'),
+              ] + static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
