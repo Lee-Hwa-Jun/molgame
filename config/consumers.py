@@ -5,7 +5,7 @@ import uuid
 import os
 
 redis_client = redis.Redis(
-    host='127.0.0.1',
+    host='redis',
     port=6379,
     db=0,
     password=os.getenv("REDIS_PASSWORD")
