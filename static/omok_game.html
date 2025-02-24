@@ -94,7 +94,7 @@
 
         const turn = document.getElementById('turn');
         const roleDisplay = document.getElementById('role');
-        const roomName = new URLSearchParams(window.location.search).get('room') || 'test';
+        const roomName = new URLSearchParams(window.location.search).get('room');
 
         const wsUrl = `ws://${window.location.host}/ws/game/omok/${roomName}`;
         console.log("WebSocket URL:", wsUrl);
@@ -155,6 +155,7 @@
         gameSocket.onclose = (e) => {
             console.log("WebSocket 연결 종료:", e);
             turn.innerText = "서버 연결 끊김";
+            window.location.href = '/';
         };
 
         gameSocket.onerror = (e) => {

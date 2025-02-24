@@ -53,7 +53,9 @@ class GameConsumer(AsyncWebsocketConsumer):
                 })
                 self.role = 'white'
             else:
-                await self.close()
+                await self.send(text_data=json.dumps({
+                    'type': 'error'
+                }))
                 return
 
         redis_client.hset(f"user_{self.user_id}", 'role', self.role)
