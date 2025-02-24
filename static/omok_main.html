@@ -20,47 +20,11 @@
     <div class="menu">
         <h1>오목 - 방 선택</h1>
         <input type="text" id="roomName" class="room-input" placeholder="방 이름 입력">
-        <button class="btn" onclick="createRoom()">새 방 만들기</button>
-        <button class="btn" onclick="joinRoom()">방 입장</button>
+        <button class="btn" onclick="joinRoom()">방 생성/입장</button>
         <div class="room-list" id="roomList"></div>
     </div>
 
     <script>
-        const socket = new WebSocket(`ws://${window.location.host}/ws/game/omok/lobby`);
-
-        socket.onopen = () => socket.send(JSON.stringify({'type': 'get_rooms', 'message': {}}));
-        socket.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-            if (data.type === 'room_list') {
-                updateRoomList(data.message.rooms);
-            } else if (data.type === 'room_error') {
-                alert(data.message.error);  // '이미 방이 존재합니다.' 알림 표시
-            } else if (data.type === 'room_created') {
-                window.location.href = `/game/?room=${data.message.name}`;
-            }
-        };
-
-        function updateRoomList(rooms) {
-            const roomList = document.getElementById('roomList');
-            roomList.innerHTML = '';
-            rooms.forEach(room => {
-                const item = document.createElement('div');
-                item.className = 'room-item';
-                item.textContent = `${room.name} (${room.players}/2)`;
-                item.onclick = () => joinRoom(room.name);
-                roomList.appendChild(item);
-            });
-        }
-
-        function createRoom() {
-            const roomName = document.getElementById('roomName').value.trim();
-            if (roomName) {
-                socket.send(JSON.stringify({'type': 'create_room', 'message': {'name': roomName}}));
-            } else {
-                alert('방 이름을 입력하세요.');
-            }
-        }
-
         function joinRoom(roomName = null) {
             const name = roomName || document.getElementById('roomName').value.trim();
             if (name) window.location.href = `/game/?room=${name}`;
