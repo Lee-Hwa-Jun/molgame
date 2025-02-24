@@ -1,11 +1,10 @@
-import json
-import redis
 from channels.generic.websocket import AsyncWebsocketConsumer
-import uuid
-import os
+import uuid, os, redis, json
+from dotenv import load_dotenv
 
+load_dotenv()
 redis_client = redis.Redis(
-    host='redis',
+    host=os.getenv("REDIS_IP", "redis"),  # 기본값 'redis' (Docker Compose)
     port=6379,
     db=0,
     password=os.getenv("REDIS_PASSWORD")
